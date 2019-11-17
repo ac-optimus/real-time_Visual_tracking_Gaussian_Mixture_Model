@@ -50,7 +50,7 @@ class Gaussian:
 
 class GMM:
     def __init__(self, K, alpha, T_b, threshVar=2.5):
-        self.Models = []#list of all the gaussian in the gaussian mixture model
+        self.Distributions = []#list of all the gaussian in the gaussian mixture model
         self.weights = []
         self.K = K #number of clusters to use
         self.init_GMM()
@@ -65,7 +65,7 @@ class GMM:
         for model_k in range(self.K):
             #see the hardcoded values
             new_model = Gaussian(0, 1)#mean ==0, std==1
-            self.Models.append(new_model)
+            self.Distributions.append(new_model)
         
         self.weights = [0.7, 0.11, 0.1, 0.09]
 
@@ -122,11 +122,11 @@ class GMM:
 
                 check_flag = 0 #weather pixel matches any of the gaussian
                 index_lst = []#index of all the matched gaussian
-                for model_k in self.Models:
+                for model_k in self.Distributions:
                     if model_k.check(self.threshVar, pixel_i):
                         #update this model
                         check_flag = 1
-                        index_model_k = self.Models.index(model_k)
+                        index_model_k = self.Distributions.index(model_k)
                         index_lst.append(index_model_k)
                         self.updt_model(model_k, pixel_i)
                 if check_flag == 0:
@@ -138,9 +138,12 @@ class GMM:
         """update mean and std of the model_k"""
         pixel = np.asarray([pixel]) if type(pixel)!=list \
                             else np.asarray(pixel)
+        #second learning rate
         lr_row = self.alpha*model_k.prob(pixel.tolist())
+       
         mu_prev = np.asarray(model_k.mean)#mean must be a list(vector)
         std_prev = np.asarray(model_k.std)
+        #new mean and std
         mu = (1-lr_row)*mu_prev + lr_row*pixel
         std_sq = (1-lr_row)*std_prev**2 +\
              lr_row*(np.linalg.norm(pixel - mu)**2)
@@ -156,7 +159,7 @@ class GMM:
         """
         wgt_prev = np.asarray(self.weights)
         M_k =  np.zeros(wgt_prev.shape)
-        M_k[index_lst] = 1
+        M_k[index_lst] = 1 #if model matches
         wgt_new = (1-self.alpha)*wgt_prev + self.alpha*M_k
         #normalize the weight
         wgt_new = wgt_new/wgt_new.sum()
@@ -175,13 +178,13 @@ class GMM:
         new_model = Gaussian(mu, std)#new gaussian
         #update the weights and replace new model
         self.weights[index_least] = 0.09#low weight
-        self.Models[index_least] = new_model
+        self.Distributions[index_least] = new_model
         return 0
 
     def get_background(self):
         """get the gaussians that represents the background"""
-        w_by_std = [self.weights[i]/self.Models[i].std[0]\
-                        for i in range(len(self.Models))]
+        w_by_std = [self.weights[i]/self.Distributions[i].std[0]\
+                        for i in range(len(self.Distributions))]
         sorted_w_by_std = sorted(w_by_std)[::-1]
         sum_ = 0
         index = []
@@ -191,7 +194,7 @@ class GMM:
             elif sum_ < self.T_b:
                 index.append(i)
                 sum_+=sorted_w_by_std[i]
-        B = np.asarray(self.Models)[index]
+        B = np.asarray(self.Distributions)[index]
         self.B = B.tolist()
         #background model ready till here
         return 0
@@ -210,5 +213,4 @@ class GMM:
                 if check_flag == 0:
                     #classify as forground --> white
                     curFrame[row_i][column_j] = 255
-        return curFrame        
-
+        return curFrame

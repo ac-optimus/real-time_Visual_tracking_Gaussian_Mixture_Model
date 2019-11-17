@@ -2,7 +2,7 @@ from gmm import GMM
 PATH = "demo_vid.avi"
 PATH_test = PATH
 #hyper parameters
-train_frame_cnt  = 50
+train_frame_cnt  = 50  #number of frames to train on
 K = 4
 alpha = 0.05
 T_b = 0.90
